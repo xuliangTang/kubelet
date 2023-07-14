@@ -798,6 +798,7 @@ func run(ctx context.Context, s *options.KubeletServer, kubeDeps *kubelet.Depend
 		klog.InfoS("Failed to ApplyOOMScoreAdj", "err", err)
 	}
 
+	// 预初始化
 	err = kubelet.PreInitRuntimeService(&s.KubeletConfiguration,
 		kubeDeps, &s.ContainerRuntimeOptions,
 		s.ContainerRuntime,

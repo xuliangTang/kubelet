@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"k8s.io/kubernetes/mykubelet/mylib"
 	"math"
 	"net"
 	"net/http"
@@ -73,7 +74,6 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/config"
 	"k8s.io/kubernetes/pkg/kubelet/configmap"
 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
-	"k8s.io/kubernetes/pkg/kubelet/cri/remote"
 	"k8s.io/kubernetes/pkg/kubelet/cri/streaming"
 	"k8s.io/kubernetes/pkg/kubelet/events"
 	"k8s.io/kubernetes/pkg/kubelet/eviction"
@@ -311,18 +311,20 @@ func PreInitRuntimeService(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 
 	switch containerRuntime {
 	case kubetypes.DockerContainerRuntime:
-		klog.InfoS("Using dockershim is deprecated, please consider using a full-fledged CRI implementation")
-		if err := runDockershim(
-			kubeCfg,
-			kubeDeps,
-			crOptions,
-			runtimeCgroups,
-			remoteRuntimeEndpoint,
-			remoteImageEndpoint,
-			nonMasqueradeCIDR,
-		); err != nil {
-			return err
-		}
+		break
+		// 2023-07-14 注释docker容器初始化垫片
+		//klog.InfoS("Using dockershim is deprecated, please consider using a full-fledged CRI implementation")
+		//if err := runDockershim(
+		//	kubeCfg,
+		//	kubeDeps,
+		//	crOptions,
+		//	runtimeCgroups,
+		//	remoteRuntimeEndpoint,
+		//	remoteImageEndpoint,
+		//	nonMasqueradeCIDR,
+		//); err != nil {
+		//	return err
+		//}
 	case kubetypes.RemoteContainerRuntime:
 		// No-op.
 		break
@@ -330,13 +332,16 @@ func PreInitRuntimeService(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
 		return fmt.Errorf("unsupported CRI runtime: %q", containerRuntime)
 	}
 
-	var err error
-	if kubeDeps.RemoteRuntimeService, err = remote.NewRemoteRuntimeService(remoteRuntimeEndpoint, kubeCfg.RuntimeRequestTimeout.Duration); err != nil {
-		return err
-	}
-	if kubeDeps.RemoteImageService, err = remote.NewRemoteImageService(remoteImageEndpoint, kubeCfg.RuntimeRequestTimeout.Duration); err != nil {
-		return err
-	}
+	// 2023-07-14 这里需要和cri交互，初始化runtimeService和ImageService。注释掉，修改为自己的
+	//var err error
+	//if kubeDeps.RemoteRuntimeService, err = remote.NewRemoteRuntimeService(remoteRuntimeEndpoint, kubeCfg.RuntimeRequestTimeout.Duration); err != nil {
+	//	return err
+	//}
+	//if kubeDeps.RemoteImageService, err = remote.NewRemoteImageService(remoteImageEndpoint, kubeCfg.RuntimeRequestTimeout.Duration); err != nil {
+	//	return err
+	//}
+	kubeDeps.RemoteRuntimeService = &mylib.MyRuntimeService{}
+	kubeDeps.RemoteImageService = &mylib.MyImageService{}
 
 	kubeDeps.useLegacyCadvisorStats = cadvisor.UsingLegacyCadvisorStats(containerRuntime, remoteRuntimeEndpoint)
 
