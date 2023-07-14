@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 /*
@@ -84,10 +85,14 @@ func (cm *containerManagerImpl) Start(node *v1.Node,
 		}
 	}
 
+	// 2023-07-15 启动可能会出现问题，注释掉
+	// Kubernetes 提供了一个设备插件框架，你可以用它来将系统硬件资源发布到 Kubelet
+	// 供应商可以实现设备插件，由你手动部署或作为 DaemonSet 来部署，而不必定制 Kubernetes 本身的代码。目标设备包括 GPU、高性能 NIC、FPGA、 InfiniBand 适配器以及其他类似的、可能需要特定于供应商的初始化和设置的计算资源
+	// https://kubernetes.io/zh-cn/docs/concepts/extend-kubernetes/compute-storage-net/device-plugins/
 	// Starts device manager.
-	if err := cm.deviceManager.Start(devicemanager.ActivePodsFunc(activePods), sourcesReady); err != nil {
-		return err
-	}
+	//if err := cm.deviceManager.Start(devicemanager.ActivePodsFunc(activePods), sourcesReady); err != nil {
+	//	return err
+	//}
 
 	return nil
 }
