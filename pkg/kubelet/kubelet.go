@@ -2370,6 +2370,7 @@ func (kl *Kubelet) updateRuntimeUp() {
 	kl.updateRuntimeMux.Lock()
 	defer kl.updateRuntimeMux.Unlock()
 
+	// 这里会调用自己实现的mylib.MyRuntimeService.Status()方法
 	s, err := kl.containerRuntime.Status()
 	if err != nil {
 		klog.ErrorS(err, "Container runtime sanity check failed")
@@ -2398,6 +2399,7 @@ func (kl *Kubelet) updateRuntimeUp() {
 		return
 	}
 	kl.runtimeState.setRuntimeState(nil)
+	// 主要是启动相关管理器：cAdvisor、containerManager、evictionManager(驱逐管理器)
 	kl.oneTimeInitializer.Do(kl.initializeRuntimeDependentModules)
 	kl.runtimeState.setRuntimeSync(kl.clock.Now())
 }
@@ -2454,6 +2456,8 @@ func (kl *Kubelet) cleanUpContainersInPod(podID types.UID, exitedContainerID str
 // Function is executed only during Kubelet start which improves latency to ready node by updating
 // pod CIDR, runtime status and node statuses ASAP.
 func (kl *Kubelet) fastStatusUpdateOnce() {
+	// 这个函数只执行一次，启动一个循环检查node缓存（informer），并获取PodCIDR值（ip地址规划），一旦得到就会更新node状态和标签等
+	// 当node注册时，k8s会给每个Node对象里spec的PodCIDR赋值，代表在这个node上的Pod使用什么ip范围，一些网络插件（如flannel）就会取这个值，从而为Pod分配IP
 	for {
 		time.Sleep(100 * time.Millisecond)
 		node, err := kl.GetNode()
@@ -2467,6 +2471,7 @@ func (kl *Kubelet) fastStatusUpdateOnce() {
 				klog.ErrorS(err, "Pod CIDR update failed", "CIDR", podCIDRs)
 				continue
 			}
+			// 去调用容器运行时的状态，从而决定容器是否ok
 			kl.updateRuntimeUp()
 			kl.syncNodeStatus()
 			return
