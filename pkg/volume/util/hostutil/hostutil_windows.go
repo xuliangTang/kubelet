@@ -35,9 +35,10 @@ import (
 type HostUtil struct{}
 
 // GetFileType 2023-07-15 缺少这个实现的方法，手动加的
-func (hu *HostUtil) GetFileType(pathname string) (FileType, error) {
-	return FileTypeFile, nil
-}
+// 经运行测试，得注释掉，虽然idea提示报错不管就行
+//func (hu *HostUtil) GetFileType(pathname string) (FileType, error) {
+//	return FileTypeFile, nil
+//}
 
 // NewHostUtil returns a struct that implements HostUtils on Windows platforms
 func NewHostUtil() *HostUtil {
