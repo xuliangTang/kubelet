@@ -603,6 +603,7 @@ func run(ctx context.Context, s *options.KubeletServer, kubeDeps *kubelet.Depend
 		klog.InfoS("Standalone mode, no API client")
 
 	case kubeDeps.KubeClient == nil, kubeDeps.EventClient == nil, kubeDeps.HeartbeatClient == nil:
+		// 初始化3个client
 		clientConfig, closeAllConns, err := buildKubeletClientConfig(ctx, s, nodeName)
 		if err != nil {
 			return err
