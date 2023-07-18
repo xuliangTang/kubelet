@@ -27,7 +27,7 @@ const (
 )
 
 // CreateCsr 创建csr资源
-func CreateCsr(client *clientset.Clientset) {
+func CreateCsr(client *clientset.Clientset) *certificatesv1.CertificateSigningRequest {
 	csr := &certificatesv1.CertificateSigningRequest{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "testcsr",
@@ -42,10 +42,12 @@ func CreateCsr(client *clientset.Clientset) {
 		},
 	}
 
-	_, err := client.CertificatesV1().CertificateSigningRequests().Create(context.Background(), csr, metav1.CreateOptions{})
+	newCsr, err := client.CertificatesV1().CertificateSigningRequests().Create(context.Background(), csr, metav1.CreateOptions{})
 	if err != nil {
 		log.Fatalln(err)
 	}
+
+	return newCsr
 }
 
 // GenCSRPEM 生成csr(证书签名请求)的spec.request
