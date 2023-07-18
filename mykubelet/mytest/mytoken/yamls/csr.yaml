@@ -1,0 +1,11 @@
+# 参考文档：https://kubernetes.io/zh-cn/docs/reference/access-authn-authz/certificate-signing-requests/#normal-user
+apiVersion: certificates.k8s.io/v1
+kind: CertificateSigningRequest
+metadata:
+  name: testcsr
+spec:
+  request: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0KTUlIck1JR1RBZ0VBTURFeEZUQVRCZ05WQkFvVERITjVjM1JsYlRwdWIyUmxjekVZTUJZR0ExVUVBeE1QYzNsegpkR1Z0T201dlpHVTZkSGhzTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFaDA0ai9Ub1BpMVFECmkxMDUyZDdxVUNBa0dTOUpUODFtNytyeVFIQk1jdlRJcjcrNThlVDRqaXpOU1lEMTlvcU9INUErY3BxWnAvV1YKOTY5RndNWGJLS0FBTUFvR0NDcUdTTTQ5QkFNQ0EwY0FNRVFDSUExTnc0alN2eWNZSFJncmw5VUF3OVg3dU44Mwo1eEZFTUhkVllPcStvZ2sxQWlCdE1vV0J0SmpXUzJzekdtMkNzbzlBOVI2Q1pmZUJxeC9BRjBBWXNrVHpQQT09Ci0tLS0tRU5EIENFUlRJRklDQVRFIFJFUVVFU1QtLS0tLQo=
+  signerName: kubernetes.io/kube-apiserver-client
+  #expirationSeconds: 3600
+  usages:
+    - client auth
