@@ -1,87 +1,53 @@
-# Kubernetes (K8s)
-
-[![GoPkg Widget]][GoPkg] [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/569/badge)](https://bestpractices.coreinfrastructure.org/projects/569)
-
-<img src="https://github.com/kubernetes/kubernetes/raw/master/logo/logo.png" width="100">
-
-----
-
-Kubernetes, also known as K8s, is an open source system for managing [containerized applications]
-across multiple hosts. It provides basic mechanisms for deployment, maintenance,
-and scaling of applications.
-
-Kubernetes builds upon a decade and a half of experience at Google running
-production workloads at scale using a system called [Borg],
-combined with best-of-breed ideas and practices from the community.
-
-Kubernetes is hosted by the Cloud Native Computing Foundation ([CNCF]).
-If your company wants to help shape the evolution of
-technologies that are container-packaged, dynamically scheduled,
-and microservices-oriented, consider joining the CNCF.
-For details about who's involved and how Kubernetes plays a role,
-read the CNCF [announcement].
-
-----
-
-## To start using K8s
-
-See our documentation on [kubernetes.io].
-
-Try our [interactive tutorial].
-
-Take a free course on [Scalable Microservices with Kubernetes].
-
-To use Kubernetes code as a library in other applications, see the [list of published components](https://git.k8s.io/kubernetes/staging/README.md).
-Use of the `k8s.io/kubernetes` module or `k8s.io/kubernetes/...` packages as libraries is not supported.
-
-## To start developing K8s
-
-The [community repository] hosts all information about
-building Kubernetes from source, how to contribute code
-and documentation, who to contact about what, etc.
-
-If you want to build Kubernetes right away there are two options:
-
-##### You have a working [Go environment].
-
+## 源码
+### 节点状态
 ```
-mkdir -p $GOPATH/src/k8s.io
-cd $GOPATH/src/k8s.io
-git clone https://github.com/kubernetes/kubernetes
-cd kubernetes
-make
+pkg/kubelet/kubelet_node_status.go 588行
+```
+kubectl是怎么判断Node是Ready的
+```
+pkg/printers/internalversion/printers.go
 ```
 
-##### You have a working [Docker environment].
-
+### kubeClient初始化
 ```
-git clone https://github.com/kubernetes/kubernetes
-cd kubernetes
-make quick-release
+cmd/kubelet/app/server.go 604行
 ```
 
-For the full story, head over to the [developer's documentation].
+### kubelet续期Lease对象
+[参考文档](https://kubernetes.io/zh-cn/docs/reference/config-api/kubelet-config.v1beta1/) 搜索`nodeLeaseDurationSeconds`
+```
+pkg/kubelet/kubelet.go 863行
+```
 
-## Support
+### kubeadm BootstrapToken
+```
+cmd/kubeadm/app/cmd/init.go 190行
+```
 
-If you need support, start with the [troubleshooting guide],
-and work your way through the process that we've outlined.
+### kubelet生成私钥和证书请求
+```
+pkg/kubelet/certificate/kubelet.go 90行
+staging/src/k8s.io/client-go/util/certificate/certificate_manager.go 640行
+```
 
-That said, if you have questions, reach out to us
-[one way or another][communication].
+### kubelet创建csr资源
+```
+staging/src/k8s.io/client-go/util/certificate/csr/csr.go 52行
+```
 
-[announcement]: https://cncf.io/news/announcement/2015/07/new-cloud-native-computing-foundation-drive-alignment-among-container
-[Borg]: https://research.google.com/pubs/pub43438.html
-[CNCF]: https://www.cncf.io/about
-[communication]: https://git.k8s.io/community/communication
-[community repository]: https://git.k8s.io/community
-[containerized applications]: https://kubernetes.io/docs/concepts/overview/what-is-kubernetes/
-[developer's documentation]: https://git.k8s.io/community/contributors/devel#readme
-[Docker environment]: https://docs.docker.com/engine
-[Go environment]: https://golang.org/doc/install
-[GoPkg]: https://pkg.go.dev/k8s.io/kubernetes
-[GoPkg Widget]: https://pkg.go.dev/badge/k8s.io/kubernetes.svg
-[interactive tutorial]: https://kubernetes.io/docs/tutorials/kubernetes-basics
-[kubernetes.io]: https://kubernetes.io
-[Scalable Microservices with Kubernetes]: https://www.udacity.com/course/scalable-microservices-with-kubernetes--ud615
-[troubleshooting guide]: https://kubernetes.io/docs/tasks/debug-application-cluster/troubleshooting/
+### 租约控制器
+```
+staging/src/k8s.io/component-helpers/apimachinery/lease/controller.go 74行
+```
+
+### pleg模块
+Pod Lifecycle Event Generator(Pod生命周期生成器): 定期检查节点上Pod运行状态，把Pod的状态变化封装为特有的Event(PodLifecycleEvent)，从而触发kubelet的主同步机制
+pleg是怎么判断容器发生了变化？（如新增删除Pod）
+通过relist()函数获取Pod列表并本地缓存，然后定时再取，每次都和之前都缓存比对，从而就知道哪些Pod发生了变化，从而生成相关都Pod生命周期事件和更改后都状态
+```
+pkg/kubelet/kubelet.go 1499行
+```
+主要的runtime接口
+```
+pkg/kubelet/kuberuntime/kuberuntime_manager.go 164行
+```
