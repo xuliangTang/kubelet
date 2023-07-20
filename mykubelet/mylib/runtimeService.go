@@ -32,7 +32,8 @@ func (m MyRuntimeService) RemoveContainer(containerID string) error {
 }
 
 func (m MyRuntimeService) ListContainers(filter *runtimeapi.ContainerFilter) ([]*runtimeapi.Container, error) {
-	return []*runtimeapi.Container{}, nil
+	// return []*runtimeapi.Container{}, nil
+	return MockContainers(), nil
 }
 
 func (m MyRuntimeService) ContainerStatus(containerID string) (*runtimeapi.ContainerStatus, error) {
@@ -76,7 +77,8 @@ func (m MyRuntimeService) PodSandboxStatus(podSandboxID string) (*runtimeapi.Pod
 }
 
 func (m MyRuntimeService) ListPodSandbox(filter *runtimeapi.PodSandboxFilter) ([]*runtimeapi.PodSandbox, error) {
-	return []*runtimeapi.PodSandbox{}, nil
+	// return []*runtimeapi.PodSandbox{}, nil
+	return MockSandbox(), nil
 }
 
 func (m MyRuntimeService) PortForward(request *runtimeapi.PortForwardRequest) (*runtimeapi.PortForwardResponse, error) {
