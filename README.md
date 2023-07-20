@@ -41,8 +41,10 @@ staging/src/k8s.io/component-helpers/apimachinery/lease/controller.go 74行
 ```
 
 ### pleg模块
-Pod Lifecycle Event Generator(Pod生命周期生成器): 定期检查节点上Pod运行状态，把Pod的状态变化封装为特有的Event(PodLifecycleEvent)，从而触发kubelet的主同步机制
+Pod Lifecycle Event Generator(Pod生命周期生成器): 定期检查节点上Pod运行状态，把Pod的状态变化封装为特有的Event(PodLifecycleEvent)，从而触发kubelet的主同步机制 
+
 pleg是怎么判断容器发生了变化？（如新增删除Pod）
+
 通过relist()函数获取Pod列表并本地缓存，然后定时再取，每次都和之前都缓存比对，从而就知道哪些Pod发生了变化，从而生成相关都Pod生命周期事件和更改后都状态
 ```
 pkg/kubelet/kubelet.go 1499行
