@@ -53,3 +53,53 @@ pkg/kubelet/kubelet.go 1499行
 ```
 pkg/kubelet/kuberuntime/kuberuntime_manager.go 164行
 ```
+
+### syncLoop主循环
+具体处理在syncLoopIteration()函数里：
+1. 监听PodConfig(对静态Pod的变更产生的事件)的变更：configCh
+2. 监听pleg的事件：plegCh
+3. 监听等待同步的Pod：syncCh
+4. 监听清理Pod的事件：housekeepingCh
+5. 监听来自(如存活、就绪、启动)探针的事件：livenessManager readinessManager startupManager
+```
+pkg/kubelet/kubelet.go 2022行
+```
+
+### 静态Pod初始化
+静态Pod对应 /etc/kubernetes/manifests 目录的文件
+```
+pkg/kubelet/config/config.go 70行
+```
+
+### statusManager
+主要功能是将Pod状态信息同步到k8s apiserver，它不会直接监控Pod的状态，而是提供接口供其他manager(如probeManager)进行调用，同时syncLoop主循环也会调用到它
+
+它暴露的几个主要方法：
+- SetPodStatus(): Pod状态发生变化时调用，更新状态到apiserver
+- SetContainerReadiness(): Pod中容器的健康状态发生变化时调用，修改Pod的健康状态
+- TerminatePod(): 删除Pod时调用，把Pod中所有的容器设置为terminated状态
+- RemoveOrphanedStatuses(): 删除孤儿Pod时调用
+```
+pkg/kubelet/status/status_manager.go 93行
+调用在 pkg/kubelet/kubelet.go 1491行
+初始化在 pkg/kubelet/status/status_manager.go 122行
+```
+初始化的参数：
+- kubeClient: 用于和apiserver交互
+- podManager: pod内存形式的管理器(管理kubelet对pod的访问)
+- podStatuses: pod与状态的对应关系
+- podStatusesChannel: 当其他组件调用statusManager更新pod状态时，会调用这个channel
+- apiStatusVersions: 维护最新的pod status版本号，每更新一次会加1
+- podDeletionSafety: 删除pod的接口
+
+### podManager
+```
+pkg/kubelet/pod/pod_manager.go 128行
+调用在 pkg/kubelet/kubelet.go 2114行
+初始化在 pkg/kubelet/kubelet.go 624行
+```
+
+### mirrorPod
+这种类型的Pod来源于静态Pod
+1. 静态Pod不受apiserver管理，而且无法移动调度到别的节点
+2. 因此类似这种Pod在podManager会创建一个类似副本来进行查看
