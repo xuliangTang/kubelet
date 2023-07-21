@@ -45,7 +45,7 @@ Pod Lifecycle Event Generator(Pod生命周期生成器): 定期检查节点上Po
 
 pleg是怎么判断容器发生了变化？（如新增删除Pod）
 
-通过relist()函数获取Pod列表并本地缓存，然后定时再取，每次都和之前都缓存比对，从而就知道哪些Pod发生了变化，从而生成相关都Pod生命周期事件和更改后都状态
+通过relist()函数获取Pod列表并本地缓存(podCache)，然后定时再取，每次都和之前都缓存比对，从而就知道哪些Pod发生了变化，从而生成相关都Pod生命周期事件和更改后都状态
 ```
 pkg/kubelet/kubelet.go 1499行
 ```
@@ -122,7 +122,12 @@ pkg/kubelet/kubelet.go 195行
 PodWorker是kubelet中用于管理每个Pod的协程角色
 1. 每创建一个新的Pod，都会为其配置一个专有的podWorker
 2. 每个podWorker都是一个协程，它会创建一个类型为UpdatePodOptions(pod更新事件)的channel
-3. 获得pod的更新事件后调用podWorker中syncPodFn(Kubelet中的syncPod)函数进行具体的同步工作(syncPod中包含了将Pod的最新状态上传给apiServer、创建pod的专属目录等)
+3. 获得pod的更新事件后调用podWorker中syncPodFn(Kubelet中的syncPod)函数进行具体的同步工作(syncPod用来将Pod的最新状态上报给apiServer、创建pod的专属目录等)
 ```
 初始化在 pkg/kubelet/kubelet.go 655行
 ```
+其中**managerPodLoop()**函数的基本作用就是监听podUpdates更新事件，从而触发PodSyncFn
+```
+调用在 pkg/kubelet/pod_workers.go 750行左右 
+```
+里面有个阻塞函数`p.podCache.GetNewerThan(pod.UID, lastSyncTime)`，它会等待podCache(本地pod和状态的映射关系map)有针对这个Pod的状态数据，才会继续往下执行
