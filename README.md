@@ -56,7 +56,7 @@ pkg/kubelet/kuberuntime/kuberuntime_manager.go 164行
 
 ### syncLoop主循环
 具体处理在syncLoopIteration()函数里：
-1. 监听PodConfig(对静态Pod的变更产生的事件)的变更：configCh
+1. 监听PodConfig(对静态及动态Pod的变更产生的事件)的变更：configCh
 2. 监听pleg的事件：plegCh
 3. 监听等待同步的Pod：syncCh
 4. 监听清理Pod的事件：housekeepingCh
@@ -93,6 +93,7 @@ pkg/kubelet/status/status_manager.go 93行
 - podDeletionSafety: 删除pod的接口
 
 ### podManager
+用来在本地缓存存储Pod相关资源
 ```
 pkg/kubelet/pod/pod_manager.go 128行
 调用在 pkg/kubelet/kubelet.go 2114行
@@ -103,3 +104,16 @@ pkg/kubelet/pod/pod_manager.go 128行
 这种类型的Pod来源于静态Pod
 1. 静态Pod不受apiserver管理，而且无法移动调度到别的节点
 2. 因此类似这种Pod在podManager会创建一个类似副本来进行查看
+
+### podConfig
+podManager里的数据从哪里收集？
+
+podConfig的updates()方法返回里configCh，用来监听file、http(这2个属于静态Pod)和apiserver(动态Pod)的事件更新。得到数据后塞入PodManager
+```
+初始化在 pkg/kubelet/kubelet.go 434行
+pkg/kubelet/kubelet.go 2099行调用了
+```
+SyncHandler接口用来对PodManager缓存新增、更新、删除等操作
+```
+pkg/kubelet/kubelet.go 195行
+```
