@@ -117,3 +117,12 @@ SyncHandler接口用来对PodManager缓存新增、更新、删除等操作
 ```
 pkg/kubelet/kubelet.go 195行
 ```
+
+### podWorker
+PodWorker是kubelet中用于管理每个Pod的协程角色
+1. 每创建一个新的Pod，都会为其配置一个专有的podWorker
+2. 每个podWorker都是一个协程，它会创建一个类型为UpdatePodOptions(pod更新事件)的channel
+3. 获得pod的更新事件后调用podWorker中syncPodFn(Kubelet中的syncPod)函数进行具体的同步工作(syncPod中包含了将Pod的最新状态上传给apiServer、创建pod的专属目录等)
+```
+初始化在 pkg/kubelet/kubelet.go 655行
+```
