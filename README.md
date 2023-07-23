@@ -131,3 +131,9 @@ PodWorker是kubelet中用于管理每个Pod的协程角色
 调用在 pkg/kubelet/pod_workers.go 750行左右 
 ```
 里面有个阻塞函数`p.podCache.GetNewerThan(pod.UID, lastSyncTime)`，它会等待podCache(本地pod和状态的映射关系map)有针对这个Pod的状态数据，才会继续往下执行
+
+### proberManager
+管理节点上的探测器，用于检查容器运行状况
+```
+pkg/kubelet/prober/proberManager.go 278行
+```

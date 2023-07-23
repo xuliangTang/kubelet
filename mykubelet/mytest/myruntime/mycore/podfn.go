@@ -7,15 +7,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
 	v1qos "k8s.io/kubernetes/pkg/apis/core/v1/helper/qos"
 	"k8s.io/kubernetes/pkg/features"
 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
+	"k8s.io/kubernetes/pkg/kubelet/prober"
+	"k8s.io/kubernetes/pkg/kubelet/prober/results"
 	"k8s.io/kubernetes/pkg/kubelet/status"
 	kubetypes "k8s.io/kubernetes/pkg/kubelet/types"
 	"log"
 	"sort"
+	"time"
 )
 
 func SyncTerminatingFn(ctx context.Context, pod *v1.Pod, podStatus *kubecontainer.PodStatus, runningPod *kubecontainer.Pod, gracePeriod *int64, podStatusFn func(*v1.PodStatus)) error {
@@ -33,10 +37,18 @@ type PodFn struct {
 	KubeClient    *kubernetes.Clientset
 	StatusManager status.Manager
 	ReasonCache   *ReasonCache
+
+	probeManager prober.Manager // 探针管理器
+	recorder     record.EventRecorder
 }
 
-func NewPodFn(kubeClient *kubernetes.Clientset, statusManager status.Manager) *PodFn {
-	return &PodFn{KubeClient: kubeClient, StatusManager: statusManager, ReasonCache: NewReasonCache()}
+func NewPodFn(kubeClient *kubernetes.Clientset, statusManager status.Manager, recorder record.EventRecorder) *PodFn {
+	// 存活、就绪、启动探针
+	lm, rm, sm := results.NewManager(), results.NewManager(), results.NewManager()
+	// 创建探针管理器
+	pm := prober.NewManager(statusManager, lm, rm, sm, &MyCommandRunner{}, recorder)
+
+	return &PodFn{KubeClient: kubeClient, StatusManager: statusManager, ReasonCache: NewReasonCache(), probeManager: pm, recorder: recorder}
 }
 
 func (this *PodFn) SyncPodFn(ctx context.Context, updateType kubetypes.SyncPodType, pod *v1.Pod, mirrorPod *v1.Pod, podStatus *kubecontainer.PodStatus) (bool, error) {
@@ -119,6 +131,9 @@ func (this *PodFn) generateAPIPodStatus(pod *v1.Pod, podStatus *kubecontainer.Po
 			s.Phase = pod.Status.Phase
 		}
 	}
+
+	// ensure the probe managers have up to date status for containers
+	this.probeManager.UpdatePodStatus(pod.UID, s)
 
 	// preserve all conditions not owned by the kubelet
 	s.Conditions = make([]v1.PodCondition, 0, len(pod.Status.Conditions)+1)
@@ -539,3 +554,11 @@ func (m MyPodDeletionSafetyProvider) PodCouldHaveRunningContainers(pod *v1.Pod) 
 }
 
 var _ status.PodDeletionSafetyProvider = &MyPodDeletionSafetyProvider{}
+
+type MyCommandRunner struct{}
+
+func (m MyCommandRunner) RunInContainer(id kubecontainer.ContainerID, cmd []string, timeout time.Duration) ([]byte, error) {
+	return []byte(""), nil
+}
+
+var _ kubecontainer.CommandRunner = &MyCommandRunner{}

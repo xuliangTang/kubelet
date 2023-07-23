@@ -353,7 +353,7 @@ func NewPodWorkers(
 	wque := queue.NewBasicWorkQueue(cl)
 
 	// 创建podSync封装类
-	podFn := NewPodFn(client, statusManager)
+	podFn := NewPodFn(client, statusManager, recorder)
 
 	return &podWorkers{
 		podSyncStatuses:                    map[types.UID]*podSyncStatus{},
