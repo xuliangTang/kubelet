@@ -63,28 +63,16 @@ func main() {
 		pods := item.Pods
 		switch item.Op {
 		case kubetypes.ADD:
-			for _, p := range pods {
-				// 加入缓存
-				podCache.PodManager.AddPod(p)
-
-				// 模拟执行dispatchWork 创建podWorker，开启协程监听pod状态
-				// 它会等待podCache有针对这个pod的数据，然后执行syncPod或syncTerminate把本地pod状态同步给apiserver
-				podCache.PodWorkers.UpdatePod(mycore.UpdatePodOptions{
-					Pod:        p,
-					MirrorPod:  nil,
-					UpdateType: kubetypes.SyncPodCreate,
-					StartTime:  podCache.Clock.Now(),
-				})
-				// fmt.Println(podCache.PodWorkers.GetPodUpdates())
-			}
+			mycore.HandlePodAdditions(podCache, pods)
 		case kubetypes.UPDATE:
-			for _, p := range pods {
-				podCache.PodManager.UpdatePod(p)
-			}
+			mycore.HandlePodUpdates(podCache, pods)
 		case kubetypes.DELETE:
-			for _, p := range pods {
-				podCache.PodManager.DeletePod(p)
-			}
+			// 默认情况下不会直接删除，而是设置DeletionTimestamp和DeletionGracePeriodSeconds(优雅删除)
+			// 所以kubelet得到的首先是更新事件，并把DeletionGracePeriodSeconds作为停止容器的timeout(还要取出preStop时间)
+			// 接下来kubelet会处理一系列的操作(如cri)，接着触发一次Delete操作，最后触发Remove操作(一些清理工作)
+			mycore.HandlePodUpdates(podCache, pods)
+		case kubetypes.REMOVE:
+			mycore.HandlePodRemoves(podCache, pods)
 		}
 	}
 }

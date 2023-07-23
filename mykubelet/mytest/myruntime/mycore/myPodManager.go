@@ -39,7 +39,7 @@ func NewPodCache(client *kubernetes.Clientset, nodeName string) *PodCache {
 	nodeLister := fact.Core().V1().Nodes().Lister()
 	secretManager := secret.NewSimpleSecretManager(client)
 	configMapManager := configmap.NewSimpleConfigMapManager(client)
-	mirrorPodClient := pod.NewBasicMirrorClient(client, "mylain", nodeLister)
+	mirrorPodClient := pod.NewBasicMirrorClient(client, nodeName, nodeLister)
 	podManager := pod.NewBasicPodManager(mirrorPodClient, secretManager, configMapManager)
 
 	// 创建podConfig
@@ -49,6 +49,8 @@ func NewPodCache(client *kubernetes.Clientset, nodeName string) *PodCache {
 
 	// 创建statusManager
 	statusManager := status.NewManager(client, podManager, &MyPodDeletionSafetyProvider{})
+	statusManager.Start()
+
 	// 创建自己的podWorker
 	cl := clock.RealClock{}
 	innerPodCache := kubecontainer.NewCache()

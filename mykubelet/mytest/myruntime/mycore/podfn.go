@@ -17,7 +17,6 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/prober/results"
 	"k8s.io/kubernetes/pkg/kubelet/status"
 	kubetypes "k8s.io/kubernetes/pkg/kubelet/types"
-	"log"
 	"sort"
 	"time"
 )
@@ -54,6 +53,11 @@ func NewPodFn(kubeClient *kubernetes.Clientset, statusManager status.Manager, re
 func (this *PodFn) SyncPodFn(ctx context.Context, updateType kubetypes.SyncPodType, pod *v1.Pod, mirrorPod *v1.Pod, podStatus *kubecontainer.PodStatus) (bool, error) {
 	fmt.Println("临时的syncpod函数")
 
+	// 使用statusManager上报 更新状态到apiServer
+	pod_status := this.generateAPIPodStatus(pod, podStatus)
+	this.StatusManager.SetPodStatus(pod, pod_status)
+
+	/*// 手动上报
 	if updateType == kubetypes.SyncPodCreate {
 		if pod.Name == "ngx-mylain" {
 			// 把container.Status 转换为 v1.PodStatus
@@ -68,7 +72,7 @@ func (this *PodFn) SyncPodFn(ctx context.Context, updateType kubetypes.SyncPodTy
 				log.Println(err)
 			}
 		}
-	}
+	}*/
 
 	return true, nil
 }
