@@ -58,6 +58,11 @@ func main() {
 		http.ListenAndServe(":8080", nil)
 	}()
 
+	// 启动pleg 定期和本地cri交互 比对pod状态把变更事件放入podCache
+	fmt.Println("启动pleg")
+	mycore.StartPleg(podCache.Clock, podCache.InnerPodCache)
+
+	// podConfig和apiserver交互 遍历podUpdate channel
 	fmt.Println("开始监听")
 	for item := range podCache.PodConfig.Updates() {
 		pods := item.Pods
@@ -68,6 +73,7 @@ func main() {
 				podCache.PodManager.AddPod(p)
 
 				// 模拟执行dispatchWork 创建podWorker，开启协程监听pod状态
+				// 它会等待podCache有针对这个pod的数据，然后执行syncPod或syncTerminate把本地pod状态同步给apiserver
 				podCache.PodWorkers.UpdatePod(mycore.UpdatePodOptions{
 					Pod:        p,
 					MirrorPod:  nil,
