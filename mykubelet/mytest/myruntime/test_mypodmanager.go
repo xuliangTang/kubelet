@@ -4,10 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"k8s.io/apimachinery/pkg/types"
-	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 	"k8s.io/kubernetes/mykubelet/mytest/myclient/myclientlib"
 	"k8s.io/kubernetes/mykubelet/mytest/myruntime/mycore"
-	"k8s.io/kubernetes/pkg/kubelet/container"
 	kubetypes "k8s.io/kubernetes/pkg/kubelet/types"
 	"net/http"
 	"sort"
@@ -16,7 +14,7 @@ import (
 
 func main() {
 	client := myclientlib.InitClient()
-	nodeName := "mykubelet"
+	nodeName := "mylain"
 	podCache := mycore.NewPodCache(client, nodeName)
 
 	go func() {
@@ -43,24 +41,21 @@ func main() {
 				return
 			}
 			// 随便构建一个status，让managerPodLoop()接收到
-			status := &container.PodStatus{
-				ID: types.UID(podId),
-				SandboxStatuses: []*runtimeapi.PodSandboxStatus{
-					{
-						Id:    podId,
-						State: runtimeapi.PodSandboxState_SANDBOX_READY,
-					},
-				},
+			getPod, exist := podCache.PodManager.GetPodByUID(types.UID(podId))
+			if !exist {
+				writer.Write([]byte("没有找到Pod"))
+				return
 			}
-			podCache.InnerPodCache.Set(types.UID(podId), status, nil, time.Now())
+			podStatus := mycore.SetPodReady(getPod)
+			podCache.InnerPodCache.Set(types.UID(podId), podStatus, nil, time.Now())
 			writer.Write([]byte("设置成功"))
 		})
 		http.ListenAndServe(":8080", nil)
 	}()
 
 	// 启动pleg 定期和本地cri交互 比对pod状态把变更事件放入podCache
-	fmt.Println("启动pleg")
-	mycore.StartPleg(podCache.Clock, podCache.InnerPodCache)
+	//fmt.Println("启动pleg")
+	//mycore.StartPleg(podCache.Clock, podCache.InnerPodCache)
 
 	// podConfig和apiserver交互 遍历podUpdate channel
 	fmt.Println("开始监听")

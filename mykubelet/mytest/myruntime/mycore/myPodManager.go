@@ -14,6 +14,7 @@ import (
 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
 	"k8s.io/kubernetes/pkg/kubelet/pod"
 	"k8s.io/kubernetes/pkg/kubelet/secret"
+	"k8s.io/kubernetes/pkg/kubelet/status"
 	kubetypes "k8s.io/kubernetes/pkg/kubelet/types"
 )
 
@@ -41,17 +42,22 @@ func NewPodCache(client *kubernetes.Clientset, nodeName string) *PodCache {
 	mirrorPodClient := pod.NewBasicMirrorClient(client, "mylain", nodeLister)
 	podManager := pod.NewBasicPodManager(mirrorPodClient, secretManager, configMapManager)
 
-	// 创建自己的podWorker
-	cl := clock.RealClock{}
+	// 创建podConfig
 	eventBroadcaster := record.NewBroadcaster()                                                                              // 事件分发器广播(分发给watch它的函数，用channel实现)
 	eventRecorder := eventBroadcaster.NewRecorder(legacyscheme.Scheme, v1.EventSource{Component: "kubelet", Host: nodeName}) // 事件记录器(如Pod生命周期事件、各种错误事件)
+	podConfig := newPodConfig(client, fact, nodeName, eventRecorder)
+
+	// 创建statusManager
+	statusManager := status.NewManager(client, podManager, &MyPodDeletionSafetyProvider{})
+	// 创建自己的podWorker
+	cl := clock.RealClock{}
 	innerPodCache := kubecontainer.NewCache()
-	pw := NewPodWorkers(innerPodCache, eventRecorder, cl)
+	pw := NewPodWorkers(innerPodCache, eventRecorder, cl, client, statusManager)
 
 	return &PodCache{
 		client:        client,
 		PodManager:    podManager,
-		PodConfig:     newPodConfig(client, fact, nodeName, eventRecorder),
+		PodConfig:     podConfig,
 		Clock:         cl,
 		PodWorkers:    pw,
 		InnerPodCache: innerPodCache,

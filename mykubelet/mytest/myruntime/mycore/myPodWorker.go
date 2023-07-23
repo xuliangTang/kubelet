@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 	"k8s.io/klog/v2"
@@ -15,6 +16,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/events"
 	"k8s.io/kubernetes/pkg/kubelet/eviction"
 	"k8s.io/kubernetes/pkg/kubelet/metrics"
+	"k8s.io/kubernetes/pkg/kubelet/status"
 	kubetypes "k8s.io/kubernetes/pkg/kubelet/types"
 	"k8s.io/kubernetes/pkg/kubelet/util/queue"
 	"strings"
@@ -343,8 +345,15 @@ func NewPodWorkers(
 	cache kubecontainer.Cache, // pod和状态的映射关系
 	recorder record.EventRecorder,
 	cl clock.RealClock,
+
+	client *kubernetes.Clientset,
+	statusManager status.Manager,
+
 ) PodWorkers {
 	wque := queue.NewBasicWorkQueue(cl)
+
+	// 创建podSync封装类
+	podFn := NewPodFn(client, statusManager)
 
 	return &podWorkers{
 		podSyncStatuses:                    map[types.UID]*podSyncStatus{},
@@ -352,7 +361,7 @@ func NewPodWorkers(
 		lastUndeliveredWorkUpdate:          map[types.UID]podWork{},
 		startedStaticPodsByFullname:        map[string]types.UID{},
 		waitingToStartStaticPodsByFullname: map[string][]types.UID{},
-		syncPodFn:                          SyncPodFn, // 自己写的SyncPodFn(kubelet是syncPod)
+		syncPodFn:                          podFn.SyncPodFn, // 自己写的SyncPodFn(kubelet是syncPod)
 		syncTerminatingPodFn:               SyncTerminatingFn,
 		syncTerminatedPodFn:                SyncTerminatedFn,
 		recorder:                           recorder,
@@ -794,7 +803,7 @@ func (p *podWorkers) managePodLoop(podUpdates <-chan podWork) {
 	var podStarted bool
 	for update := range podUpdates {
 		pod := update.Options.Pod
-		fmt.Println("当前要处理的Pod名称是", pod.Name)
+		fmt.Println("当前要处理的Pod名称是", pod.Name, "uid是", pod.UID)
 
 		// Decide whether to start the pod. If the pod was terminated prior to the pod being allowed
 		// to start, we have to clean it up and then exit the pod worker loop.
