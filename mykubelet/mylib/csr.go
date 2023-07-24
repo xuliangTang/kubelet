@@ -66,7 +66,7 @@ func GenCSRPEM() []byte {
 	// 生成csr
 	cr := &x509.CertificateRequest{
 		Subject: pkix.Name{
-			CommonName:   fmt.Sprintf("system:node:%s", "txl"),
+			CommonName:   fmt.Sprintf("system:node:%s", "mylain"),
 			Organization: []string{"system:nodes"},
 		},
 	}

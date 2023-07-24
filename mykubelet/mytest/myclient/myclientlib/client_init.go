@@ -7,7 +7,7 @@ import (
 )
 
 func InitClient() *clientset.Clientset {
-	kubeconfig, err := clientcmd.BuildConfigFromFlags("", "./mykubelet/kubelet.config")
+	kubeconfig, err := clientcmd.BuildConfigFromFlags("", "./mykubelet/certs/kubelet.config")
 	if err != nil {
 		log.Fatalln(err)
 	}
