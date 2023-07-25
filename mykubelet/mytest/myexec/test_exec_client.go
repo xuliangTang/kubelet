@@ -10,7 +10,9 @@ import (
 )
 
 func main() {
-	req, _ := http.NewRequest("GET", "http://localhost:9090/exec/default/abd/bbb", nil)
+	//execUrl := "http://localhost:9090/exec/default/mypod/mycontainer"
+	execUrl := "http://localhost:6443"
+	req, _ := http.NewRequest("GET", execUrl, nil)
 	req.Header.Set("Upgrade", "SPDY/3.1")
 	req.Header.Set("Connection", "Upgrade")
 	tlsConfig := &tls.Config{
