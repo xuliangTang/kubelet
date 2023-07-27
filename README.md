@@ -81,6 +81,7 @@ pkg/kubelet/config/config.go 70行
 - RemoveOrphanedStatuses(): 删除孤儿Pod时调用
 ```
 pkg/kubelet/status/status_manager.go 93行
+状态同步在 pkg/kubelet/status/status_manager.go 644行
 调用在 pkg/kubelet/kubelet.go 1491行
 初始化在 pkg/kubelet/status/status_manager.go 122行
 ```
