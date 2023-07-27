@@ -16,6 +16,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/events"
 	"k8s.io/kubernetes/pkg/kubelet/eviction"
 	"k8s.io/kubernetes/pkg/kubelet/metrics"
+	"k8s.io/kubernetes/pkg/kubelet/pod"
 	"k8s.io/kubernetes/pkg/kubelet/status"
 	kubetypes "k8s.io/kubernetes/pkg/kubelet/types"
 	"k8s.io/kubernetes/pkg/kubelet/util/queue"
@@ -338,7 +339,8 @@ type podWorkers struct {
 	resyncInterval time.Duration
 
 	// podCache stores kubecontainer.PodStatus for all pods.
-	podCache kubecontainer.Cache
+	podCache   kubecontainer.Cache
+	podManager pod.Manager
 }
 
 func NewPodWorkers(
@@ -348,7 +350,7 @@ func NewPodWorkers(
 
 	client *kubernetes.Clientset,
 	statusManager status.Manager,
-
+	podManager pod.Manager,
 ) PodWorkers {
 	wque := queue.NewBasicWorkQueue(cl)
 
@@ -369,6 +371,7 @@ func NewPodWorkers(
 		resyncInterval:                     time.Second * 1, // 写死1秒
 		backOffPeriod:                      time.Second * 10,
 		podCache:                           cache,
+		podManager:                         podManager,
 	}
 }
 func (p *podWorkers) GetPodUpdates() map[types.UID]chan podWork {
@@ -798,12 +801,26 @@ func (p *podWorkers) allowStaticPodStart(fullname string, uid types.UID) bool {
 	return true
 }
 
+// 插入pod状态到podCache中，触发syncPodFn
+func insertPodCache(podId types.UID, podManager pod.Manager, podCache kubecontainer.Cache) error {
+	getPod, exist := podManager.GetPodByUID(podId)
+	if !exist {
+		return fmt.Errorf("pod not found")
+	}
+	podStatus := SetPodReady(getPod)
+	podCache.Set(podId, podStatus, nil, time.Now())
+	return nil
+}
+
 func (p *podWorkers) managePodLoop(podUpdates <-chan podWork) {
 	var lastSyncTime time.Time
 	var podStarted bool
 	for update := range podUpdates {
 		pod := update.Options.Pod
 		fmt.Println("当前要处理的Pod名称是", pod.Name, "uid是", pod.UID)
+		if insertErr := insertPodCache(pod.UID, p.podManager, p.podCache); insertErr != nil {
+			fmt.Printf("插入缓存失败:%s\n", insertErr)
+		}
 
 		// Decide whether to start the pod. If the pod was terminated prior to the pod being allowed
 		// to start, we have to clean it up and then exit the pod worker loop.

@@ -54,7 +54,7 @@ func NewPodCache(client *kubernetes.Clientset, nodeName string) *PodCache {
 	// 创建自己的podWorker
 	cl := clock.RealClock{}
 	innerPodCache := kubecontainer.NewCache()
-	pw := NewPodWorkers(innerPodCache, eventRecorder, cl, client, statusManager)
+	pw := NewPodWorkers(innerPodCache, eventRecorder, cl, client, statusManager, podManager)
 
 	return &PodCache{
 		client:        client,
